@@ -1,6 +1,7 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { createServerSupabaseClient } from "./supabase-server";
 
+
 const LECTURE_SYSTEM_PROMPT = `You are an expert CompTIA A+ instructor creating engaging study lectures.
 You receive relevant excerpts from the Mike Meyers CompTIA A+ book and official CompTIA objectives.
 Your task: write a clear, thorough, and engaging lecture on the requested topic.
@@ -13,10 +14,17 @@ Rules:
 - Tone: knowledgeable but approachable — like a great teacher, not a textbook.`;
 
 async function embedQuery(text: string): Promise<number[]> {
-  const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY!);
-  const model = genAI.getGenerativeModel({ model: "text-embedding-004" });
-  const result = await model.embedContent(text);
-  return result.embedding.values;
+  const res = await fetch("https://api-atlas.nomic.ai/v1/embedding/text", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${process.env.NOMIC_API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ model: "nomic-embed-text-v1.5", texts: [text] }),
+  });
+  if (!res.ok) throw new Error(`Nomic embed failed: ${res.statusText}`);
+  const data = await res.json();
+  return data.embeddings[0];
 }
 
 export async function generateLecture(topic: string): Promise<string> {

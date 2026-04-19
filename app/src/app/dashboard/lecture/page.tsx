@@ -3,7 +3,7 @@ import LectureTheatre from "@/components/LectureTheatre";
 export default function LecturePage({
   searchParams,
 }: {
-  searchParams: Promise<{ domain?: string }>;
+  searchParams: Promise<{ topic?: string }>;
 }) {
   return <LectureTheatre searchParamsPromise={searchParams} />;
 }

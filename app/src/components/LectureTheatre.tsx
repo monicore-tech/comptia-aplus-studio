@@ -4,31 +4,19 @@ import { use, useState, useEffect, useRef } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
-const DOMAIN_LABELS: Record<string, string> = {
-  "1.0": "Mobile Devices",
-  "2.0": "Networking",
-  "3.0": "Hardware",
-  "4.0": "Virtualization & Cloud Computing",
-  "5.0": "Hardware & Network Troubleshooting",
-  "6.0": "Operating Systems",
-  "7.0": "Security",
-  "8.0": "Software Troubleshooting",
-  "9.0": "Operational Procedures",
-};
-
 interface Props {
-  searchParamsPromise: Promise<{ domain?: string }>;
+  searchParamsPromise: Promise<{ topic?: string }>;
 }
 
 export default function LectureTheatre({ searchParamsPromise }: Props) {
-  const { domain } = use(searchParamsPromise);
+  const { topic } = use(searchParamsPromise);
   const [lecture, setLecture] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
-    if (!domain) return;
+    if (!topic) return;
     abortRef.current?.abort();
     const ctrl = new AbortController();
     abortRef.current = ctrl;
@@ -40,7 +28,7 @@ export default function LectureTheatre({ searchParamsPromise }: Props) {
     fetch("/api/lecture", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ topic: DOMAIN_LABELS[domain] ?? domain }),
+      body: JSON.stringify({ topic }),
       signal: ctrl.signal,
     })
       .then(async (res) => {
@@ -54,21 +42,19 @@ export default function LectureTheatre({ searchParamsPromise }: Props) {
       .finally(() => setLoading(false));
 
     return () => ctrl.abort();
-  }, [domain]);
+  }, [topic]);
 
-  if (!domain) {
+  if (!topic) {
     return (
       <div className="flex items-center justify-center h-full text-zinc-500 text-sm">
-        Select a domain from the sidebar.
+        Select a topic from the sidebar to begin.
       </div>
     );
   }
 
   return (
     <div className="max-w-3xl mx-auto px-6 py-8">
-      <h2 className="text-2xl font-bold text-white mb-6">
-        {DOMAIN_LABELS[domain] ?? domain}
-      </h2>
+      <h2 className="text-2xl font-bold text-white mb-6">{topic}</h2>
 
       {loading && (
         <div className="space-y-3 animate-pulse">
@@ -76,7 +62,7 @@ export default function LectureTheatre({ searchParamsPromise }: Props) {
             <div
               key={i}
               className="h-4 bg-zinc-800 rounded"
-              style={{ width: `${70 + Math.random() * 30}%` }}
+              style={{ width: `${70 + (i * 7) % 30}%` }}
             />
           ))}
         </div>

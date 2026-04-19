@@ -22,7 +22,6 @@ def chunk_text(text: str) -> list[str]:
 
 
 def embed_single(client, text: str) -> list[float]:
-    """Embed one text with exponential backoff on rate limit errors."""
     delay = 1.0
     for attempt in range(6):
         try:
@@ -41,10 +40,10 @@ def embed_single(client, text: str) -> list[float]:
 
 
 def embed_texts(texts: list[str], api_key: str) -> list[list[float]]:
-    """Embed a list of texts staying within the 100 req/min free tier limit."""
+    """Embed texts via Gemini (768-dim, matches query-time embeddings in rag.ts)."""
     client = genai.Client(api_key=api_key)
     all_embeddings = []
     for text in texts:
         all_embeddings.append(embed_single(client, text))
-        time.sleep(0.65)  # ~92 req/min — safely under 100 req/min limit
+        time.sleep(0.65)  # ~92 req/min — safely under 100 req/min free tier limit
     return all_embeddings
