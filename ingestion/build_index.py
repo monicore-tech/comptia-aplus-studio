@@ -9,7 +9,6 @@ import argparse
 import os
 import uuid
 from dotenv import load_dotenv
-from openai import OpenAI
 from supabase import create_client
 from tqdm import tqdm
 
@@ -17,18 +16,18 @@ from parse_epub import extract_epub
 from parse_pdfs import extract_pdf
 from chunk_embed import chunk_text, embed_texts
 
-load_dotenv("../.env.local")
+load_dotenv("../app/.env.local")
 
 SUPABASE_URL = os.environ["NEXT_PUBLIC_SUPABASE_URL"]
 SUPABASE_KEY = os.environ["NEXT_PUBLIC_SUPABASE_ANON_KEY"]
-OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
+GOOGLE_API_KEY = os.environ["GOOGLE_API_KEY"]
 
 
-def upsert_documents(docs: list[dict], openai_client: OpenAI, supabase) -> None:
+def upsert_documents(docs: list[dict], supabase) -> None:
     rows = []
     for doc in tqdm(docs, desc="Chunking & embedding"):
         chunks = chunk_text(doc["content"])
-        embeddings = embed_texts(chunks, openai_client)
+        embeddings = embed_texts(chunks, GOOGLE_API_KEY)
         for chunk, embedding in zip(chunks, embeddings):
             rows.append({
                 "id": str(uuid.uuid4()),
@@ -39,11 +38,10 @@ def upsert_documents(docs: list[dict], openai_client: OpenAI, supabase) -> None:
             })
 
     print(f"Upserting {len(rows)} chunks to Supabase…")
-    batch_size = 50
-    for i in range(0, len(rows), batch_size):
-        batch = rows[i : i + batch_size]
+    for i in range(0, len(rows), 50):
+        batch = rows[i : i + 50]
         supabase.table("documents").upsert(batch).execute()
-        print(f"  {min(i + batch_size, len(rows))}/{len(rows)}")
+        print(f"  {min(i + 50, len(rows))}/{len(rows)}")
 
     print("Done.")
 
@@ -54,9 +52,7 @@ def main() -> None:
     parser.add_argument("--pdfs", nargs="+", help="Paths to CompTIA PDF files")
     args = parser.parse_args()
 
-    openai_client = OpenAI(api_key=OPENAI_API_KEY)
     supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
-
     all_docs: list[dict] = []
 
     if args.epub:
@@ -74,7 +70,7 @@ def main() -> None:
         return
 
     print(f"Total documents: {len(all_docs)}")
-    upsert_documents(all_docs, openai_client, supabase)
+    upsert_documents(all_docs, supabase)
 
 
 if __name__ == "__main__":

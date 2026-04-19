@@ -1,4 +1,4 @@
-import { OpenAIEmbeddings, ChatOpenAI } from "@langchain/openai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import { createServerSupabaseClient } from "./supabase-server";
 
 const LECTURE_SYSTEM_PROMPT = `You are an expert CompTIA A+ instructor creating engaging study lectures.
@@ -13,11 +13,10 @@ Rules:
 - Tone: knowledgeable but approachable — like a great teacher, not a textbook.`;
 
 async function embedQuery(text: string): Promise<number[]> {
-  const embeddings = new OpenAIEmbeddings({
-    model: "text-embedding-3-small",
-    apiKey: process.env.OPENAI_API_KEY,
-  });
-  return embeddings.embedQuery(text);
+  const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY!);
+  const model = genAI.getGenerativeModel({ model: "text-embedding-004" });
+  const result = await model.embedContent(text);
+  return result.embedding.values;
 }
 
 export async function generateLecture(topic: string): Promise<string> {
@@ -35,19 +34,12 @@ export async function generateLecture(topic: string): Promise<string> {
     .map((d: { content: string }) => d.content)
     .join("\n\n---\n\n");
 
-  const llm = new ChatOpenAI({
-    model: "gpt-4o",
-    temperature: 0.4,
-    apiKey: process.env.OPENAI_API_KEY,
-  });
+  const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY!);
+  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
-  const response = await llm.invoke([
-    { role: "system", content: LECTURE_SYSTEM_PROMPT },
-    {
-      role: "user",
-      content: `Topic: ${topic}\n\nSource excerpts:\n\n${context}`,
-    },
-  ]);
+  const response = await model.generateContent(
+    `${LECTURE_SYSTEM_PROMPT}\n\nTopic: ${topic}\n\nSource excerpts:\n\n${context}`
+  );
 
-  return response.content as string;
+  return response.response.text();
 }

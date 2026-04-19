@@ -67,7 +67,7 @@ export type Database = {
     Views: Record<string, never>;
     Functions: {
       match_documents: {
-        Args: { query_embedding: number[]; match_count?: number };
+        Args: { query_embedding: number[]; match_count?: number }; // 768-dim Gemini embeddings
         Returns: MatchDocumentsRow[];
       };
     };
